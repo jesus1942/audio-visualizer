@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audio Visualizer</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Audio Visualizer</h1>
+        <div class="controls">
+            <input type="file" id="audioFile" accept="audio/*">
+            <button id="playBtn" disabled>Play</button>
+            <button id="pauseBtn" disabled>Pause</button>
+            <select id="visualizerType">
+                <option value="bars">Barras</option>
+                <option value="circle">Circular</option>
+                <option value="wave">Onda</option>
+            </select>
+        </div>
+        <canvas id="canvas"></canvas>
+        <div class="info">
+            <p>Sube un archivo de audio para comenzar la visualización</p>
+        </div>
+    </div>
+    <script src="index.js"></script>
+</body>
+</html>
