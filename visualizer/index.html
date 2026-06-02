@@ -2,28 +2,46 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Audio Visualizer</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#000000">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Visualizer</title>
+    <link rel="manifest" href="manifest.json">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div class="container">
-        <h1>Audio Visualizer</h1>
-        <div class="controls">
-            <input type="file" id="audioFile" accept="audio/*">
-            <button id="playBtn" disabled>Play</button>
-            <button id="pauseBtn" disabled>Pause</button>
+    <canvas id="canvas"></canvas>
+
+    <div class="controls" id="controls">
+        <div class="input-group">
+            <input type="text" id="youtubeUrl" placeholder="YouTube URL" autocomplete="off">
+            <button id="loadYt" class="btn-icon">▶</button>
+        </div>
+
+        <div class="input-group">
+            <label for="audioFile" class="file-label">
+                <span>Archivo local</span>
+                <input type="file" id="audioFile" accept="audio/*">
+            </label>
+        </div>
+
+        <div class="player-controls">
+            <button id="playBtn" class="btn-icon" disabled>▶</button>
+            <button id="pauseBtn" class="btn-icon" disabled>⏸</button>
             <select id="visualizerType">
                 <option value="bars">Barras</option>
                 <option value="circle">Circular</option>
                 <option value="wave">Onda</option>
+                <option value="particles">Partículas</option>
             </select>
         </div>
-        <canvas id="canvas"></canvas>
-        <div class="info">
-            <p>Sube un archivo de audio para comenzar la visualizaci�n</p>
-        </div>
+
+        <button id="micBtn" class="btn-icon mic-btn">🎤</button>
     </div>
+
+    <button id="toggleControls" class="toggle-btn">⚙</button>
+
     <script src="index.js"></script>
 </body>
 </html>
