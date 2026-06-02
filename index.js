@@ -112,7 +112,7 @@ class Guardian {
 
         // Cast button (shows instruction)
         this.castBtn.addEventListener('click', () => {
-            alert('Para proyectar al TV:\n\n1. Android: Usa "Smart View" o "Pantalla inalámbrica"\n2. iPhone: Usa AirPlay\n3. Chromecast: Toca el ícono de Cast en Chrome\n\nLuego activa Modo Guardia');
+            alert('Para proyectar al TV:\n\n1. Android: Usa "Smart View" o "Pantalla inalambrica"\n2. iPhone: Usa AirPlay\n3. Chromecast: Toca el icono de Cast en Chrome\n\nLuego activa Modo Guardia');
         });
 
         this.toggleControls.addEventListener('click', () => {
@@ -153,7 +153,6 @@ class Guardian {
 
             // Update UI
             this.isGuarding = true;
-            this.statusIndicator.textContent = '🔴';
             this.statusIndicator.classList.add('active');
             this.startGuard.style.display = 'none';
             this.stopGuard.style.display = 'block';
@@ -167,7 +166,7 @@ class Guardian {
             }, 3000);
 
         } catch (err) {
-            alert('Error: No se pudo acceder al micrófono. Verifica los permisos.');
+            alert('Error: No se pudo acceder al microfono. Verifica los permisos.');
         }
     }
 
@@ -183,7 +182,6 @@ class Guardian {
         }
 
         this.isGuarding = false;
-        this.statusIndicator.textContent = '⚫';
         this.statusIndicator.classList.remove('active');
         this.startGuard.style.display = 'block';
         this.stopGuard.style.display = 'none';
