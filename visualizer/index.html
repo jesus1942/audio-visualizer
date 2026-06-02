@@ -22,25 +22,29 @@
         </div>
 
         <div id="guardSettings" class="settings-panel">
+            <div class="info-box">
+                💡 Disuasión activa: Flashes responden a ruidos (pasos, golpes, voces) → Cámaras detectan → Luces se encienden
+            </div>
+
             <label class="slider-label">
-                Sensibilidad
-                <input type="range" id="sensitivity" min="1" max="10" value="5">
-                <span id="sensitivityValue">5</span>
+                Sensibilidad a ruidos
+                <input type="range" id="sensitivity" min="1" max="10" value="7">
+                <span id="sensitivityValue">7</span>
             </label>
 
             <label class="slider-label">
-                Brillo
+                Intensidad de flash
                 <input type="range" id="brightness" min="1" max="10" value="10">
                 <span id="brightnessValue">10</span>
             </label>
 
             <label class="slider-label">
-                Frecuencia de cambios
+                Actividad aleatoria
                 <input type="range" id="frequency" min="1" max="10" value="5">
                 <span id="frequencyValue">5</span>
             </label>
 
-            <button id="startGuard" class="btn-primary">▶ Iniciar Guardia</button>
+            <button id="startGuard" class="btn-primary">🛡️ Activar Disuasión</button>
             <button id="stopGuard" class="btn-danger" style="display:none">⏹ Detener</button>
         </div>
 

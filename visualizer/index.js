@@ -34,7 +34,7 @@ class Guardian {
 
         // Guard mode state
         this.isGuarding = false;
-        this.guardSensitivity = 5;
+        this.guardSensitivity = 7;
         this.guardBrightness = 10;
         this.guardFrequency = 5;
 
@@ -271,28 +271,47 @@ class Guardian {
 
         // Calculate average volume
         const avg = this.dataArray.reduce((a, b) => a + b) / this.bufferLength;
-        const threshold = 255 - (this.guardSensitivity * 20);
-        const brightnessMultiplier = this.guardBrightness / 10;
-        const changeSpeed = this.guardFrequency / 10;
 
-        if (avg > threshold * brightnessMultiplier * changeSpeed) {
-            // Flash white for camera detection
+        // Detect sudden spikes (footsteps, knocks, voices)
+        const maxVal = Math.max(...this.dataArray);
+        const isSuddenNoise = maxVal > (255 - this.guardSensitivity * 15);
+
+        const threshold = 20 + (this.guardSensitivity * 5);
+        const brightnessMultiplier = this.guardBrightness / 10;
+
+        // MODO DISUASIÓN: Respuesta agresiva a ruidos
+        if (avg > threshold || isSuddenNoise) {
+            // Flash blanco INMEDIATO para cámaras
             this.ctx.fillStyle = `rgba(255, 255, 255, ${brightnessMultiplier})`;
             this.ctx.fillRect(0, 0, width, height);
+
+            // Patrón de "alerta" - parpadeo rápido
+            if (Math.random() > 0.5) {
+                this.ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+                this.ctx.fillRect(0, 0, width, height);
+            }
         } else {
-            // Fade to black
-            this.ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+            // Fade más lento para que las cámaras detecten el cambio
+            this.ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
             this.ctx.fillRect(0, 0, width, height);
         }
 
-        // Add moving gradient for more variation
-        if (avg > 50) {
+        // Actividad aleatoria para simular vigilancia humana
+        if (Math.random() > 0.98) {
+            const randomIntensity = Math.random() * 0.5 * brightnessMultiplier;
+            this.ctx.fillStyle = `rgba(255, 255, 255, ${randomIntensity})`;
+            this.ctx.fillRect(0, 0, width, height);
+        }
+
+        // Gradiente adicional en sonidos sostenidos (conversaciones, pasos continuos)
+        if (avg > 80) {
             const gradient = this.ctx.createRadialGradient(
                 width/2, height/2, 0,
                 width/2, height/2, Math.max(width, height)/2
             );
             const intensity = (avg / 255) * brightnessMultiplier;
-            gradient.addColorStop(0, `rgba(255, 255, 255, ${intensity})`);
+            gradient.addColorStop(0, `rgba(255, 255, 255, ${intensity * 1.5})`);
+            gradient.addColorStop(0.5, `rgba(255, 255, 255, ${intensity * 0.5})`);
             gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
             this.ctx.fillStyle = gradient;
             this.ctx.fillRect(0, 0, width, height);
