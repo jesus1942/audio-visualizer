@@ -13,17 +13,26 @@
 <body>
     <canvas id="canvas"></canvas>
 
-    <div class="status-indicator" id="statusIndicator">⚫</div>
+    <div class="status-indicator" id="statusIndicator">
+        <svg class="icon"><use href="icons.svg#icon-dot"/></svg>
+    </div>
 
     <div class="controls" id="controls">
         <div class="mode-selector">
-            <button id="guardMode" class="mode-btn active">🛡️ Modo Guardia</button>
-            <button id="visualMode" class="mode-btn">🎨 Visual</button>
+            <button id="guardMode" class="mode-btn active">
+                <svg class="icon"><use href="icons.svg#icon-shield"/></svg>
+                <span>Modo Guardia</span>
+            </button>
+            <button id="visualMode" class="mode-btn">
+                <svg class="icon"><use href="icons.svg#icon-paint"/></svg>
+                <span>Visual</span>
+            </button>
         </div>
 
         <div id="guardSettings" class="settings-panel">
             <div class="info-box">
-                💡 Disuasión activa: Flashes responden a ruidos (pasos, golpes, voces) → Cámaras detectan → Luces se encienden
+                <svg class="icon icon-info"><use href="icons.svg#icon-light"/></svg>
+                <span>Disuasion activa: Flashes responden a ruidos (pasos, golpes, voces) - Camaras detectan - Luces se encienden</span>
             </div>
 
             <label class="slider-label">
@@ -44,8 +53,14 @@
                 <span id="frequencyValue">5</span>
             </label>
 
-            <button id="startGuard" class="btn-primary">🛡️ Activar Disuasión</button>
-            <button id="stopGuard" class="btn-danger" style="display:none">⏹ Detener</button>
+            <button id="startGuard" class="btn-primary">
+                <svg class="icon"><use href="icons.svg#icon-shield"/></svg>
+                <span>Activar Disuasion</span>
+            </button>
+            <button id="stopGuard" class="btn-danger" style="display:none">
+                <svg class="icon"><use href="icons.svg#icon-stop"/></svg>
+                <span>Detener</span>
+            </button>
         </div>
 
         <div id="visualSettings" class="settings-panel" style="display:none">
@@ -57,11 +72,15 @@
             </div>
 
             <div class="player-controls">
-                <button id="playBtn" class="btn-icon" disabled>▶</button>
-                <button id="pauseBtn" class="btn-icon" disabled>⏸</button>
+                <button id="playBtn" class="btn-icon" disabled>
+                    <svg class="icon"><use href="icons.svg#icon-play"/></svg>
+                </button>
+                <button id="pauseBtn" class="btn-icon" disabled>
+                    <svg class="icon"><use href="icons.svg#icon-pause"/></svg>
+                </button>
                 <select id="visualizerType">
-                    <option value="flashbang">Flashbang (Cámaras)</option>
-                    <option value="strobe">Estroboscópico</option>
+                    <option value="flashbang">Flashbang (Camaras)</option>
+                    <option value="strobe">Estroboscopico</option>
                     <option value="bars">Barras</option>
                     <option value="circle">Circular</option>
                     <option value="wave">Onda</option>
@@ -69,11 +88,19 @@
             </div>
         </div>
 
-        <button id="fullscreenBtn" class="btn-secondary">🖥️ Pantalla completa</button>
-        <button id="castBtn" class="btn-secondary">📺 Proyectar</button>
+        <button id="fullscreenBtn" class="btn-secondary">
+            <svg class="icon"><use href="icons.svg#icon-screen"/></svg>
+            <span>Pantalla completa</span>
+        </button>
+        <button id="castBtn" class="btn-secondary">
+            <svg class="icon"><use href="icons.svg#icon-cast"/></svg>
+            <span>Proyectar</span>
+        </button>
     </div>
 
-    <button id="toggleControls" class="toggle-btn">⚙</button>
+    <button id="toggleControls" class="toggle-btn">
+        <svg class="icon"><use href="icons.svg#icon-settings"/></svg>
+    </button>
 
     <script src="index.js"></script>
 </body>
