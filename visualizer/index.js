@@ -1,14 +1,25 @@
-class AudioVisualizer {
+class Guardian {
     constructor() {
         this.canvas = document.getElementById('canvas');
         this.ctx = this.canvas.getContext('2d');
+        this.statusIndicator = document.getElementById('statusIndicator');
+
+        // Controls
+        this.guardMode = document.getElementById('guardMode');
+        this.visualMode = document.getElementById('visualMode');
+        this.guardSettings = document.getElementById('guardSettings');
+        this.visualSettings = document.getElementById('visualSettings');
+        this.startGuard = document.getElementById('startGuard');
+        this.stopGuard = document.getElementById('stopGuard');
+        this.sensitivity = document.getElementById('sensitivity');
+        this.brightness = document.getElementById('brightness');
+        this.frequency = document.getElementById('frequency');
         this.audioFile = document.getElementById('audioFile');
         this.playBtn = document.getElementById('playBtn');
         this.pauseBtn = document.getElementById('pauseBtn');
         this.visualizerType = document.getElementById('visualizerType');
-        this.youtubeUrl = document.getElementById('youtubeUrl');
-        this.loadYt = document.getElementById('loadYt');
-        this.micBtn = document.getElementById('micBtn');
+        this.fullscreenBtn = document.getElementById('fullscreenBtn');
+        this.castBtn = document.getElementById('castBtn');
         this.toggleControls = document.getElementById('toggleControls');
         this.controlsPanel = document.getElementById('controls');
 
@@ -18,10 +29,14 @@ class AudioVisualizer {
         this.dataArray = null;
         this.bufferLength = null;
         this.source = null;
-        this.animationId = null;
-        this.particles = [];
         this.micStream = null;
-        this.isUsingMic = false;
+        this.wakeLock = null;
+
+        // Guard mode state
+        this.isGuarding = false;
+        this.guardSensitivity = 5;
+        this.guardBrightness = 10;
+        this.guardFrequency = 5;
 
         this.setupCanvas();
         this.setupEventListeners();
@@ -34,21 +49,49 @@ class AudioVisualizer {
     }
 
     setupEventListeners() {
+        // Mode switching
+        this.guardMode.addEventListener('click', () => {
+            this.guardMode.classList.add('active');
+            this.visualMode.classList.remove('active');
+            this.guardSettings.style.display = 'block';
+            this.visualSettings.style.display = 'none';
+        });
+
+        this.visualMode.addEventListener('click', () => {
+            this.visualMode.classList.add('active');
+            this.guardMode.classList.remove('active');
+            this.visualSettings.style.display = 'block';
+            this.guardSettings.style.display = 'none';
+        });
+
+        // Guard controls
+        this.startGuard.addEventListener('click', () => this.startGuardMode());
+        this.stopGuard.addEventListener('click', () => this.stopGuardMode());
+
+        // Sliders
+        this.sensitivity.addEventListener('input', (e) => {
+            this.guardSensitivity = parseInt(e.target.value);
+            document.getElementById('sensitivityValue').textContent = e.target.value;
+        });
+
+        this.brightness.addEventListener('input', (e) => {
+            this.guardBrightness = parseInt(e.target.value);
+            document.getElementById('brightnessValue').textContent = e.target.value;
+        });
+
+        this.frequency.addEventListener('input', (e) => {
+            this.guardFrequency = parseInt(e.target.value);
+            document.getElementById('frequencyValue').textContent = e.target.value;
+        });
+
+        // Audio file
         this.audioFile.addEventListener('change', (e) => {
             const file = e.target.files[0];
             if (file) {
-                this.stopMic();
                 const url = URL.createObjectURL(file);
                 this.audio.src = url;
                 this.playBtn.disabled = false;
                 this.initAudioContext();
-            }
-        });
-
-        this.loadYt.addEventListener('click', () => {
-            const url = this.youtubeUrl.value.trim();
-            if (url) {
-                this.loadYouTube(url);
             }
         });
 
@@ -64,12 +107,12 @@ class AudioVisualizer {
             this.pauseBtn.disabled = true;
         });
 
-        this.micBtn.addEventListener('click', () => {
-            if (this.isUsingMic) {
-                this.stopMic();
-            } else {
-                this.startMic();
-            }
+        // Fullscreen
+        this.fullscreenBtn.addEventListener('click', () => this.toggleFullscreen());
+
+        // Cast button (shows instruction)
+        this.castBtn.addEventListener('click', () => {
+            alert('Para proyectar al TV:\n\n1. Android: Usa "Smart View" o "Pantalla inalámbrica"\n2. iPhone: Usa AirPlay\n3. Chromecast: Toca el ícono de Cast en Chrome\n\nLuego activa Modo Guardia');
         });
 
         this.toggleControls.addEventListener('click', () => {
@@ -86,70 +129,101 @@ class AudioVisualizer {
         });
     }
 
-    async startMic() {
+    async startGuardMode() {
         try {
-            this.audio.pause();
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            this.micStream = stream;
-            this.isUsingMic = true;
-            this.micBtn.textContent = '⏹';
-            this.micBtn.style.background = 'rgba(255, 50, 50, 0.2)';
+            // Request microphone
+            this.micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
 
+            // Setup audio analysis
             if (!this.audioContext) {
                 this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
             }
 
             this.analyser = this.audioContext.createAnalyser();
-            this.analyser.fftSize = 512;
+            this.analyser.fftSize = 256;
 
-            const micSource = this.audioContext.createMediaStreamSource(stream);
+            const micSource = this.audioContext.createMediaStreamSource(this.micStream);
             micSource.connect(this.analyser);
 
             this.bufferLength = this.analyser.frequencyBinCount;
             this.dataArray = new Uint8Array(this.bufferLength);
 
-            this.playBtn.disabled = true;
-            this.pauseBtn.disabled = true;
+            // Request wake lock
+            await this.requestWakeLock();
+
+            // Update UI
+            this.isGuarding = true;
+            this.statusIndicator.textContent = '🔴';
+            this.statusIndicator.classList.add('active');
+            this.startGuard.style.display = 'none';
+            this.stopGuard.style.display = 'block';
+            this.controlsPanel.classList.add('hidden');
+
+            // Auto fullscreen after 3 seconds
+            setTimeout(() => {
+                if (this.isGuarding) {
+                    this.toggleFullscreen();
+                }
+            }, 3000);
+
         } catch (err) {
-            alert('No se pudo acceder al micrófono');
+            alert('Error: No se pudo acceder al micrófono. Verifica los permisos.');
         }
     }
 
-    stopMic() {
+    stopGuardMode() {
         if (this.micStream) {
             this.micStream.getTracks().forEach(track => track.stop());
             this.micStream = null;
-            this.isUsingMic = false;
-            this.micBtn.textContent = '🎤';
-            this.micBtn.style.background = '';
-            this.playBtn.disabled = false;
+        }
+
+        if (this.wakeLock) {
+            this.wakeLock.release();
+            this.wakeLock = null;
+        }
+
+        this.isGuarding = false;
+        this.statusIndicator.textContent = '⚫';
+        this.statusIndicator.classList.remove('active');
+        this.startGuard.style.display = 'block';
+        this.stopGuard.style.display = 'none';
+
+        if (document.fullscreenElement) {
+            document.exitFullscreen();
+        }
+
+        // Clear canvas
+        this.ctx.fillStyle = '#000';
+        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+    }
+
+    async requestWakeLock() {
+        try {
+            if ('wakeLock' in navigator) {
+                this.wakeLock = await navigator.wakeLock.request('screen');
+            }
+        } catch (err) {
+            console.log('Wake Lock not supported');
         }
     }
 
-    loadYouTube(url) {
-        const videoId = this.extractYouTubeId(url);
-        if (!videoId) {
-            alert('URL de YouTube inválida');
-            return;
+    toggleFullscreen() {
+        if (!document.fullscreenElement) {
+            document.documentElement.requestFullscreen().then(() => {
+                document.body.classList.add('fullscreen');
+            });
+        } else {
+            document.exitFullscreen().then(() => {
+                document.body.classList.remove('fullscreen');
+            });
         }
-
-        this.stopMic();
-
-        const audioUrl = `https://www.youtube.com/watch?v=${videoId}`;
-        alert('Por limitaciones del navegador, pega esta URL en YouTube y activa el micrófono para visualizar el audio que se reproduce.');
-    }
-
-    extractYouTubeId(url) {
-        const regExp = /^.*((youtu.be\/)|(v\/)|(\/u\/\w\/)|(embed\/)|(watch\?))\??v?=?([^#&?]*).*/;
-        const match = url.match(regExp);
-        return (match && match[7].length === 11) ? match[7] : null;
     }
 
     initAudioContext() {
         if (!this.audioContext) {
             this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
             this.analyser = this.audioContext.createAnalyser();
-            this.analyser.fftSize = 512;
+            this.analyser.fftSize = 256;
 
             this.source = this.audioContext.createMediaElementSource(this.audio);
             this.source.connect(this.analyser);
@@ -167,22 +241,86 @@ class AudioVisualizer {
 
         this.analyser.getByteFrequencyData(this.dataArray);
 
-        const type = this.visualizerType.value;
-
-        switch(type) {
-            case 'bars':
-                this.drawBars();
-                break;
-            case 'circle':
-                this.drawCircle();
-                break;
-            case 'wave':
-                this.drawWave();
-                break;
-            case 'particles':
-                this.drawParticles();
-                break;
+        if (this.isGuarding) {
+            this.drawGuardMode();
+        } else {
+            const type = this.visualizerType.value;
+            switch(type) {
+                case 'flashbang':
+                    this.drawFlashbang();
+                    break;
+                case 'strobe':
+                    this.drawStrobe();
+                    break;
+                case 'bars':
+                    this.drawBars();
+                    break;
+                case 'circle':
+                    this.drawCircle();
+                    break;
+                case 'wave':
+                    this.drawWave();
+                    break;
+            }
         }
+    }
+
+    drawGuardMode() {
+        const width = this.canvas.width;
+        const height = this.canvas.height;
+
+        // Calculate average volume
+        const avg = this.dataArray.reduce((a, b) => a + b) / this.bufferLength;
+        const threshold = 255 - (this.guardSensitivity * 20);
+        const brightnessMultiplier = this.guardBrightness / 10;
+        const changeSpeed = this.guardFrequency / 10;
+
+        if (avg > threshold * brightnessMultiplier * changeSpeed) {
+            // Flash white for camera detection
+            this.ctx.fillStyle = `rgba(255, 255, 255, ${brightnessMultiplier})`;
+            this.ctx.fillRect(0, 0, width, height);
+        } else {
+            // Fade to black
+            this.ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+            this.ctx.fillRect(0, 0, width, height);
+        }
+
+        // Add moving gradient for more variation
+        if (avg > 50) {
+            const gradient = this.ctx.createRadialGradient(
+                width/2, height/2, 0,
+                width/2, height/2, Math.max(width, height)/2
+            );
+            const intensity = (avg / 255) * brightnessMultiplier;
+            gradient.addColorStop(0, `rgba(255, 255, 255, ${intensity})`);
+            gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+            this.ctx.fillStyle = gradient;
+            this.ctx.fillRect(0, 0, width, height);
+        }
+    }
+
+    drawFlashbang() {
+        const width = this.canvas.width;
+        const height = this.canvas.height;
+        const avg = this.dataArray.reduce((a, b) => a + b) / this.bufferLength;
+
+        if (avg > 50) {
+            this.ctx.fillStyle = '#fff';
+            this.ctx.fillRect(0, 0, width, height);
+        } else {
+            this.ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+            this.ctx.fillRect(0, 0, width, height);
+        }
+    }
+
+    drawStrobe() {
+        const width = this.canvas.width;
+        const height = this.canvas.height;
+        const avg = this.dataArray.reduce((a, b) => a + b) / this.bufferLength;
+
+        const shouldFlash = Math.random() > (1 - (avg / 255));
+        this.ctx.fillStyle = shouldFlash ? '#fff' : '#000';
+        this.ctx.fillRect(0, 0, width, height);
     }
 
     drawBars() {
@@ -197,10 +335,7 @@ class AudioVisualizer {
 
         for (let i = 0; i < this.bufferLength; i++) {
             const barHeight = (this.dataArray[i] / 255) * height * 0.7;
-
-            const hue = (i / this.bufferLength) * 360;
-            this.ctx.fillStyle = `hsla(${hue}, 70%, 60%, 0.8)`;
-
+            this.ctx.fillStyle = `hsl(${(i / this.bufferLength) * 360}, 70%, 60%)`;
             this.ctx.fillRect(x, height - barHeight, barWidth - 2, barHeight);
             x += barWidth;
         }
@@ -228,9 +363,7 @@ class AudioVisualizer {
             this.ctx.beginPath();
             this.ctx.moveTo(x1, y1);
             this.ctx.lineTo(x2, y2);
-
-            const hue = (i / this.bufferLength) * 360;
-            this.ctx.strokeStyle = `hsla(${hue}, 70%, 60%, 0.8)`;
+            this.ctx.strokeStyle = `hsl(${(i / this.bufferLength) * 360}, 70%, 60%)`;
             this.ctx.lineWidth = 3;
             this.ctx.stroke();
         }
@@ -255,8 +388,7 @@ class AudioVisualizer {
             const v = this.dataArray[i] / 128.0;
             const y = v * height / 2;
 
-            const hue = (i / this.bufferLength) * 360;
-            this.ctx.strokeStyle = `hsla(${hue}, 70%, 60%, 0.9)`;
+            this.ctx.strokeStyle = `hsl(${(i / this.bufferLength) * 360}, 70%, 60%)`;
 
             if (i === 0) {
                 this.ctx.moveTo(x, y);
@@ -269,46 +401,6 @@ class AudioVisualizer {
 
         this.ctx.stroke();
     }
-
-    drawParticles() {
-        const width = this.canvas.width;
-        const height = this.canvas.height;
-
-        this.ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
-        this.ctx.fillRect(0, 0, width, height);
-
-        const avg = this.dataArray.reduce((a, b) => a + b) / this.bufferLength;
-
-        if (avg > 30 && Math.random() > 0.7) {
-            for (let i = 0; i < 3; i++) {
-                this.particles.push({
-                    x: width / 2,
-                    y: height / 2,
-                    vx: (Math.random() - 0.5) * 10,
-                    vy: (Math.random() - 0.5) * 10,
-                    size: Math.random() * 4 + 2,
-                    hue: Math.random() * 360,
-                    life: 1
-                });
-            }
-        }
-
-        this.particles = this.particles.filter(p => {
-            p.x += p.vx;
-            p.y += p.vy;
-            p.vy += 0.2;
-            p.life -= 0.01;
-
-            if (p.life > 0) {
-                this.ctx.fillStyle = `hsla(${p.hue}, 70%, 60%, ${p.life})`;
-                this.ctx.beginPath();
-                this.ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-                this.ctx.fill();
-                return true;
-            }
-            return false;
-        });
-    }
 }
 
 if ('serviceWorker' in navigator) {
@@ -316,5 +408,5 @@ if ('serviceWorker' in navigator) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    new AudioVisualizer();
+    new Guardian();
 });

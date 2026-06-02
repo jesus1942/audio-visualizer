@@ -6,38 +6,67 @@
     <meta name="theme-color" content="#000000">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>Visualizer</title>
+    <title>Guardian</title>
     <link rel="manifest" href="manifest.json">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <canvas id="canvas"></canvas>
 
+    <div class="status-indicator" id="statusIndicator">⚫</div>
+
     <div class="controls" id="controls">
-        <div class="input-group">
-            <input type="text" id="youtubeUrl" placeholder="YouTube URL" autocomplete="off">
-            <button id="loadYt" class="btn-icon">▶</button>
+        <div class="mode-selector">
+            <button id="guardMode" class="mode-btn active">🛡️ Modo Guardia</button>
+            <button id="visualMode" class="mode-btn">🎨 Visual</button>
         </div>
 
-        <div class="input-group">
-            <label for="audioFile" class="file-label">
-                <span>Archivo local</span>
-                <input type="file" id="audioFile" accept="audio/*">
+        <div id="guardSettings" class="settings-panel">
+            <label class="slider-label">
+                Sensibilidad
+                <input type="range" id="sensitivity" min="1" max="10" value="5">
+                <span id="sensitivityValue">5</span>
             </label>
+
+            <label class="slider-label">
+                Brillo
+                <input type="range" id="brightness" min="1" max="10" value="10">
+                <span id="brightnessValue">10</span>
+            </label>
+
+            <label class="slider-label">
+                Frecuencia de cambios
+                <input type="range" id="frequency" min="1" max="10" value="5">
+                <span id="frequencyValue">5</span>
+            </label>
+
+            <button id="startGuard" class="btn-primary">▶ Iniciar Guardia</button>
+            <button id="stopGuard" class="btn-danger" style="display:none">⏹ Detener</button>
         </div>
 
-        <div class="player-controls">
-            <button id="playBtn" class="btn-icon" disabled>▶</button>
-            <button id="pauseBtn" class="btn-icon" disabled>⏸</button>
-            <select id="visualizerType">
-                <option value="bars">Barras</option>
-                <option value="circle">Circular</option>
-                <option value="wave">Onda</option>
-                <option value="particles">Partículas</option>
-            </select>
+        <div id="visualSettings" class="settings-panel" style="display:none">
+            <div class="input-group">
+                <label for="audioFile" class="file-label">
+                    <span>Archivo local</span>
+                    <input type="file" id="audioFile" accept="audio/*">
+                </label>
+            </div>
+
+            <div class="player-controls">
+                <button id="playBtn" class="btn-icon" disabled>▶</button>
+                <button id="pauseBtn" class="btn-icon" disabled>⏸</button>
+                <select id="visualizerType">
+                    <option value="flashbang">Flashbang (Cámaras)</option>
+                    <option value="strobe">Estroboscópico</option>
+                    <option value="bars">Barras</option>
+                    <option value="circle">Circular</option>
+                    <option value="wave">Onda</option>
+                </select>
+            </div>
         </div>
 
-        <button id="micBtn" class="btn-icon mic-btn">🎤</button>
+        <button id="fullscreenBtn" class="btn-secondary">🖥️ Pantalla completa</button>
+        <button id="castBtn" class="btn-secondary">📺 Proyectar</button>
     </div>
 
     <button id="toggleControls" class="toggle-btn">⚙</button>
