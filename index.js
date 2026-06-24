@@ -38,9 +38,85 @@ class Guardian {
         this.guardBrightness = 10;
         this.guardFrequency = 5;
 
+        // Logo central con glitch
+        this.logo = null;
+        this.logoR = null;
+        this.logoG = null;
+        this.logoB = null;
+
         this.setupCanvas();
         this.setupEventListeners();
+        this.loadLogo();
         this.animate();
+    }
+
+    loadLogo() {
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = () => {
+            this.logo = img;
+            this.logoR = this.makeTinted(img, 255, 0, 0);
+            this.logoG = this.makeTinted(img, 0, 255, 0);
+            this.logoB = this.makeTinted(img, 0, 0, 255);
+        };
+        img.src = 'https://jesus1942.github.io/natalia-natalia-Agenda-de-turnos/denovaje-white.png';
+    }
+
+    // Crea una version teñida del logo (para el RGB-split del glitch)
+    makeTinted(img, r, g, b) {
+        const c = document.createElement('canvas');
+        c.width = img.naturalWidth;
+        c.height = img.naturalHeight;
+        const cx = c.getContext('2d');
+        cx.drawImage(img, 0, 0);
+        // Teñir manteniendo el alpha original del logo
+        cx.globalCompositeOperation = 'multiply';
+        cx.fillStyle = `rgb(${r}, ${g}, ${b})`;
+        cx.fillRect(0, 0, c.width, c.height);
+        cx.globalCompositeOperation = 'destination-in';
+        cx.drawImage(img, 0, 0);
+        return c;
+    }
+
+    // Logo central con efecto glitch reactivo al bass
+    drawLogo(centerX, baseRadius) {
+        if (!this.logo) return;
+
+        const glitch = this.bassPulse || 0;
+        const aspect = this.logo.naturalHeight / this.logo.naturalWidth;
+        const w = baseRadius * 1.9;
+        const h = w * aspect;
+        const cx = centerX;
+        const cy = baseRadius * 0.85; // dentro del nucleo, visible
+        const dx = w / 2;
+        const dy = h / 2;
+
+        // Desplazamiento del RGB-split segun el golpe
+        const shift = glitch * 16 + Math.random() * glitch * 6;
+
+        this.ctx.save();
+        this.ctx.globalCompositeOperation = 'lighter';
+        // Canal rojo a un lado, azul al otro, verde con jitter -> se rearma blanco en silencio
+        this.ctx.drawImage(this.logoR, cx - dx - shift, cy - dy + (Math.random() - 0.5) * glitch * 4, w, h);
+        this.ctx.drawImage(this.logoG, cx - dx + (Math.random() - 0.5) * shift, cy - dy, w, h);
+        this.ctx.drawImage(this.logoB, cx - dx + shift, cy - dy - (Math.random() - 0.5) * glitch * 4, w, h);
+        this.ctx.restore();
+
+        // Desgarro horizontal (slices) en los golpes fuertes
+        if (glitch > 0.35) {
+            const slices = 2 + Math.floor(Math.random() * 3);
+            for (let s = 0; s < slices; s++) {
+                const srcY = Math.random() * this.logo.naturalHeight;
+                const srcH = this.logo.naturalHeight * (0.04 + Math.random() * 0.1);
+                const off = (Math.random() - 0.5) * glitch * 45;
+                const destY = cy - dy + (srcY / this.logo.naturalHeight) * h;
+                this.ctx.drawImage(
+                    this.logo,
+                    0, srcY, this.logo.naturalWidth, srcH,
+                    cx - dx + off, destY, w, (srcH / this.logo.naturalHeight) * h
+                );
+            }
+        }
     }
 
     setupCanvas() {
@@ -450,6 +526,9 @@ class Guardian {
 
         drawSide(1, 1);    // derecha
         drawSide(-1, 1);   // izquierda (espejo)
+
+        // Logo central con glitch al son del bass
+        this.drawLogo(centerX, radius);
     }
 
     drawWave() {
