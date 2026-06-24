@@ -363,137 +363,120 @@ class Guardian {
         const height = this.canvas.height;
         const centerX = width / 2;
         const centerY = height / 2;
-        const radius = Math.min(width, height) * 0.25;
+        const radius = Math.min(width, height) * 0.3;
 
-        // Fade effect con desvanecimiento lento
-        this.ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+        // Fade suave
+        this.ctx.fillStyle = 'rgba(0, 0, 0, 0.08)';
         this.ctx.fillRect(0, 0, width, height);
 
-        // Inicializar particulas si no existen
-        if (!this.circleParticles) this.circleParticles = [];
+        // Inicializar tiempo para deformacion continua
+        if (!this.cloudTime) this.cloudTime = 0;
+        this.cloudTime += 0.02;
 
-        // ESPEJO SUPERIOR (original)
+        // Rotar -90 grados (horizontal)
+        this.ctx.save();
+        this.ctx.translate(centerX, centerY);
+        this.ctx.rotate(-Math.PI / 2);
+        this.ctx.translate(-centerX, -centerY);
+
+        // LADO DERECHO (original)
         this.ctx.save();
         for (let i = 0; i < this.bufferLength / 2; i++) {
             const angle = (i / (this.bufferLength / 2)) * Math.PI;
-            const barHeight = (this.dataArray[i] / 255) * radius * 1.2;
+            const audioValue = this.dataArray[i] / 255;
+            const barHeight = audioValue * radius * 1.3;
 
-            // Agregar variacion de trazo a mano (jitter)
-            const jitterX = (Math.random() - 0.5) * 2;
-            const jitterY = (Math.random() - 0.5) * 2;
+            // Deformacion organica constante (nube que respira)
+            const deform1 = Math.sin(this.cloudTime + i * 0.1) * 8;
+            const deform2 = Math.cos(this.cloudTime * 1.3 + i * 0.15) * 6;
+            const deform = deform1 + deform2;
 
-            const x1 = centerX + Math.cos(angle) * radius + jitterX;
-            const y1 = centerY - Math.sin(angle) * radius + jitterY;
-            const x2 = centerX + Math.cos(angle) * (radius + barHeight) + jitterX;
-            const y2 = centerY - Math.sin(angle) * (radius + barHeight) + jitterY;
+            const x1 = centerX + Math.cos(angle) * (radius + deform);
+            const y1 = centerY - Math.sin(angle) * (radius + deform);
+            const x2 = centerX + Math.cos(angle) * (radius + barHeight + deform);
+            const y2 = centerY - Math.sin(angle) * (radius + barHeight + deform);
 
-            // Trazo con efecto lapiz (lineas no perfectas)
+            // Nube: rellenar areas en vez de lineas
+            const nextI = (i + 1) % (this.bufferLength / 2);
+            const nextAngle = (nextI / (this.bufferLength / 2)) * Math.PI;
+            const nextAudioValue = this.dataArray[nextI] / 255;
+            const nextBarHeight = nextAudioValue * radius * 1.3;
+            const nextDeform = Math.sin(this.cloudTime + nextI * 0.1) * 8 + Math.cos(this.cloudTime * 1.3 + nextI * 0.15) * 6;
+
+            const x3 = centerX + Math.cos(nextAngle) * (radius + nextBarHeight + nextDeform);
+            const y3 = centerY - Math.sin(nextAngle) * (radius + nextBarHeight + nextDeform);
+            const x4 = centerX + Math.cos(nextAngle) * (radius + nextDeform);
+            const y4 = centerY - Math.sin(nextAngle) * (radius + nextDeform);
+
+            // Forma de nube (relleno suave)
             this.ctx.beginPath();
             this.ctx.moveTo(x1, y1);
+            this.ctx.lineTo(x2, y2);
+            this.ctx.lineTo(x3, y3);
+            this.ctx.lineTo(x4, y4);
+            this.ctx.closePath();
 
-            // Curva con puntos intermedios para efecto organico
-            const midX = (x1 + x2) / 2 + (Math.random() - 0.5) * 3;
-            const midY = (y1 + y2) / 2 + (Math.random() - 0.5) * 3;
-            this.ctx.quadraticCurveTo(midX, midY, x2, y2);
+            // Gradiente de grises basado en intensidad de audio
+            const brightness = Math.floor(audioValue * 255);
+            this.ctx.fillStyle = `rgba(${brightness}, ${brightness}, ${brightness}, 0.3)`;
+            this.ctx.fill();
 
-            const hue = (i / this.bufferLength) * 360;
-            this.ctx.strokeStyle = `hsla(${hue}, 80%, 65%, 0.9)`;
-            this.ctx.lineWidth = 2.5;
-            this.ctx.lineCap = 'round';
-            this.ctx.stroke();
-
-            // Crear gotitas en picos de audio
-            if (barHeight > radius * 0.6 && Math.random() > 0.7) {
-                this.circleParticles.push({
-                    x: x2,
-                    y: y2,
-                    vx: (Math.cos(angle) * 2 + (Math.random() - 0.5) * 2),
-                    vy: (-Math.sin(angle) * 2 + (Math.random() - 0.5) * 2),
-                    size: Math.random() * 2 + 1,
-                    hue: hue,
-                    life: 1,
-                    alpha: 0.8
-                });
-            }
-        }
-        this.ctx.restore();
-
-        // ESPEJO INFERIOR (reflejo)
-        this.ctx.save();
-        this.ctx.translate(0, centerY);
-        this.ctx.scale(1, -1);
-        this.ctx.translate(0, -centerY);
-
-        for (let i = 0; i < this.bufferLength / 2; i++) {
-            const angle = (i / (this.bufferLength / 2)) * Math.PI;
-            const barHeight = (this.dataArray[i] / 255) * radius * 1.2;
-
-            const jitterX = (Math.random() - 0.5) * 2;
-            const jitterY = (Math.random() - 0.5) * 2;
-
-            const x1 = centerX + Math.cos(angle) * radius + jitterX;
-            const y1 = centerY - Math.sin(angle) * radius + jitterY;
-            const x2 = centerX + Math.cos(angle) * (radius + barHeight) + jitterX;
-            const y2 = centerY - Math.sin(angle) * (radius + barHeight) + jitterY;
-
-            this.ctx.beginPath();
-            this.ctx.moveTo(x1, y1);
-
-            const midX = (x1 + x2) / 2 + (Math.random() - 0.5) * 3;
-            const midY = (y1 + y2) / 2 + (Math.random() - 0.5) * 3;
-            this.ctx.quadraticCurveTo(midX, midY, x2, y2);
-
-            const hue = (i / this.bufferLength) * 360;
-            this.ctx.strokeStyle = `hsla(${hue}, 80%, 65%, 0.6)`;
-            this.ctx.lineWidth = 2.5;
-            this.ctx.lineCap = 'round';
+            // Contorno sutil blanco
+            this.ctx.strokeStyle = `rgba(255, 255, 255, ${audioValue * 0.4})`;
+            this.ctx.lineWidth = 1.5;
             this.ctx.stroke();
         }
         this.ctx.restore();
 
-        // Dibujar y actualizar particulas tipo gotitas
-        this.circleParticles = this.circleParticles.filter(p => {
-            p.x += p.vx;
-            p.y += p.vy;
-            p.vy += 0.15; // Gravedad sutil
-            p.vx *= 0.98; // Friccion
-            p.life -= 0.012;
-            p.alpha -= 0.008;
+        // LADO IZQUIERDO (espejo)
+        this.ctx.save();
+        this.ctx.translate(centerX, 0);
+        this.ctx.scale(-1, 1);
+        this.ctx.translate(-centerX, 0);
 
-            if (p.life > 0 && p.alpha > 0) {
-                // Gotita con trazo irregular
-                this.ctx.save();
-                this.ctx.globalAlpha = Math.max(0, p.alpha);
-                this.ctx.fillStyle = `hsl(${p.hue}, 70%, 60%)`;
+        for (let i = 0; i < this.bufferLength / 2; i++) {
+            const angle = (i / (this.bufferLength / 2)) * Math.PI;
+            const audioValue = this.dataArray[i] / 255;
+            const barHeight = audioValue * radius * 1.3;
 
-                // Forma irregular tipo gotita
-                this.ctx.beginPath();
-                const segments = 6;
-                for (let i = 0; i <= segments; i++) {
-                    const a = (i / segments) * Math.PI * 2;
-                    const r = p.size + Math.sin(a * 3) * (p.size * 0.3);
-                    const px = p.x + Math.cos(a) * r;
-                    const py = p.y + Math.sin(a) * r;
-                    if (i === 0) {
-                        this.ctx.moveTo(px, py);
-                    } else {
-                        this.ctx.lineTo(px, py);
-                    }
-                }
-                this.ctx.closePath();
-                this.ctx.fill();
+            const deform1 = Math.sin(this.cloudTime + i * 0.1) * 8;
+            const deform2 = Math.cos(this.cloudTime * 1.3 + i * 0.15) * 6;
+            const deform = deform1 + deform2;
 
-                // Brillo interno
-                this.ctx.beginPath();
-                this.ctx.arc(p.x, p.y, p.size * 0.4, 0, Math.PI * 2);
-                this.ctx.fillStyle = `hsla(${p.hue}, 80%, 80%, ${p.alpha * 0.6})`;
-                this.ctx.fill();
+            const x1 = centerX + Math.cos(angle) * (radius + deform);
+            const y1 = centerY - Math.sin(angle) * (radius + deform);
+            const x2 = centerX + Math.cos(angle) * (radius + barHeight + deform);
+            const y2 = centerY - Math.sin(angle) * (radius + barHeight + deform);
 
-                this.ctx.restore();
-                return true;
-            }
-            return false;
-        });
+            const nextI = (i + 1) % (this.bufferLength / 2);
+            const nextAngle = (nextI / (this.bufferLength / 2)) * Math.PI;
+            const nextAudioValue = this.dataArray[nextI] / 255;
+            const nextBarHeight = nextAudioValue * radius * 1.3;
+            const nextDeform = Math.sin(this.cloudTime + nextI * 0.1) * 8 + Math.cos(this.cloudTime * 1.3 + nextI * 0.15) * 6;
+
+            const x3 = centerX + Math.cos(nextAngle) * (radius + nextBarHeight + nextDeform);
+            const y3 = centerY - Math.sin(nextAngle) * (radius + nextBarHeight + nextDeform);
+            const x4 = centerX + Math.cos(nextAngle) * (radius + nextDeform);
+            const y4 = centerY - Math.sin(nextAngle) * (radius + nextDeform);
+
+            this.ctx.beginPath();
+            this.ctx.moveTo(x1, y1);
+            this.ctx.lineTo(x2, y2);
+            this.ctx.lineTo(x3, y3);
+            this.ctx.lineTo(x4, y4);
+            this.ctx.closePath();
+
+            const brightness = Math.floor(audioValue * 255);
+            this.ctx.fillStyle = `rgba(${brightness}, ${brightness}, ${brightness}, 0.25)`;
+            this.ctx.fill();
+
+            this.ctx.strokeStyle = `rgba(255, 255, 255, ${audioValue * 0.3})`;
+            this.ctx.lineWidth = 1.5;
+            this.ctx.stroke();
+        }
+        this.ctx.restore();
+
+        this.ctx.restore();
     }
 
     drawWave() {
