@@ -365,25 +365,135 @@ class Guardian {
         const centerY = height / 2;
         const radius = Math.min(width, height) * 0.25;
 
-        this.ctx.fillStyle = 'rgba(0, 0, 0, 0.08)';
+        // Fade effect con desvanecimiento lento
+        this.ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
         this.ctx.fillRect(0, 0, width, height);
 
-        for (let i = 0; i < this.bufferLength; i++) {
-            const angle = (i / this.bufferLength) * Math.PI * 2;
-            const barHeight = (this.dataArray[i] / 255) * radius * 0.8;
+        // Inicializar particulas si no existen
+        if (!this.circleParticles) this.circleParticles = [];
 
-            const x1 = centerX + Math.cos(angle) * radius;
-            const y1 = centerY + Math.sin(angle) * radius;
-            const x2 = centerX + Math.cos(angle) * (radius + barHeight);
-            const y2 = centerY + Math.sin(angle) * (radius + barHeight);
+        // ESPEJO SUPERIOR (original)
+        this.ctx.save();
+        for (let i = 0; i < this.bufferLength / 2; i++) {
+            const angle = (i / (this.bufferLength / 2)) * Math.PI;
+            const barHeight = (this.dataArray[i] / 255) * radius * 1.2;
+
+            // Agregar variacion de trazo a mano (jitter)
+            const jitterX = (Math.random() - 0.5) * 2;
+            const jitterY = (Math.random() - 0.5) * 2;
+
+            const x1 = centerX + Math.cos(angle) * radius + jitterX;
+            const y1 = centerY - Math.sin(angle) * radius + jitterY;
+            const x2 = centerX + Math.cos(angle) * (radius + barHeight) + jitterX;
+            const y2 = centerY - Math.sin(angle) * (radius + barHeight) + jitterY;
+
+            // Trazo con efecto lapiz (lineas no perfectas)
+            this.ctx.beginPath();
+            this.ctx.moveTo(x1, y1);
+
+            // Curva con puntos intermedios para efecto organico
+            const midX = (x1 + x2) / 2 + (Math.random() - 0.5) * 3;
+            const midY = (y1 + y2) / 2 + (Math.random() - 0.5) * 3;
+            this.ctx.quadraticCurveTo(midX, midY, x2, y2);
+
+            const hue = (i / this.bufferLength) * 360;
+            this.ctx.strokeStyle = `hsla(${hue}, 80%, 65%, 0.9)`;
+            this.ctx.lineWidth = 2.5;
+            this.ctx.lineCap = 'round';
+            this.ctx.stroke();
+
+            // Crear gotitas en picos de audio
+            if (barHeight > radius * 0.6 && Math.random() > 0.7) {
+                this.circleParticles.push({
+                    x: x2,
+                    y: y2,
+                    vx: (Math.cos(angle) * 2 + (Math.random() - 0.5) * 2),
+                    vy: (-Math.sin(angle) * 2 + (Math.random() - 0.5) * 2),
+                    size: Math.random() * 2 + 1,
+                    hue: hue,
+                    life: 1,
+                    alpha: 0.8
+                });
+            }
+        }
+        this.ctx.restore();
+
+        // ESPEJO INFERIOR (reflejo)
+        this.ctx.save();
+        this.ctx.translate(0, centerY);
+        this.ctx.scale(1, -1);
+        this.ctx.translate(0, -centerY);
+
+        for (let i = 0; i < this.bufferLength / 2; i++) {
+            const angle = (i / (this.bufferLength / 2)) * Math.PI;
+            const barHeight = (this.dataArray[i] / 255) * radius * 1.2;
+
+            const jitterX = (Math.random() - 0.5) * 2;
+            const jitterY = (Math.random() - 0.5) * 2;
+
+            const x1 = centerX + Math.cos(angle) * radius + jitterX;
+            const y1 = centerY - Math.sin(angle) * radius + jitterY;
+            const x2 = centerX + Math.cos(angle) * (radius + barHeight) + jitterX;
+            const y2 = centerY - Math.sin(angle) * (radius + barHeight) + jitterY;
 
             this.ctx.beginPath();
             this.ctx.moveTo(x1, y1);
-            this.ctx.lineTo(x2, y2);
-            this.ctx.strokeStyle = `hsl(${(i / this.bufferLength) * 360}, 70%, 60%)`;
-            this.ctx.lineWidth = 3;
+
+            const midX = (x1 + x2) / 2 + (Math.random() - 0.5) * 3;
+            const midY = (y1 + y2) / 2 + (Math.random() - 0.5) * 3;
+            this.ctx.quadraticCurveTo(midX, midY, x2, y2);
+
+            const hue = (i / this.bufferLength) * 360;
+            this.ctx.strokeStyle = `hsla(${hue}, 80%, 65%, 0.6)`;
+            this.ctx.lineWidth = 2.5;
+            this.ctx.lineCap = 'round';
             this.ctx.stroke();
         }
+        this.ctx.restore();
+
+        // Dibujar y actualizar particulas tipo gotitas
+        this.circleParticles = this.circleParticles.filter(p => {
+            p.x += p.vx;
+            p.y += p.vy;
+            p.vy += 0.15; // Gravedad sutil
+            p.vx *= 0.98; // Friccion
+            p.life -= 0.012;
+            p.alpha -= 0.008;
+
+            if (p.life > 0 && p.alpha > 0) {
+                // Gotita con trazo irregular
+                this.ctx.save();
+                this.ctx.globalAlpha = Math.max(0, p.alpha);
+                this.ctx.fillStyle = `hsl(${p.hue}, 70%, 60%)`;
+
+                // Forma irregular tipo gotita
+                this.ctx.beginPath();
+                const segments = 6;
+                for (let i = 0; i <= segments; i++) {
+                    const a = (i / segments) * Math.PI * 2;
+                    const r = p.size + Math.sin(a * 3) * (p.size * 0.3);
+                    const px = p.x + Math.cos(a) * r;
+                    const py = p.y + Math.sin(a) * r;
+                    if (i === 0) {
+                        this.ctx.moveTo(px, py);
+                    } else {
+                        this.ctx.lineTo(px, py);
+                    }
+                }
+                this.ctx.closePath();
+                this.ctx.fill();
+
+                // Brillo interno
+                this.ctx.beginPath();
+                this.ctx.arc(p.x, p.y, p.size * 0.4, 0, Math.PI * 2);
+                this.ctx.fillStyle = `hsla(${p.hue}, 80%, 80%, ${p.alpha * 0.6})`;
+                this.ctx.fill();
+
+                this.ctx.restore();
+                return true;
+            }
+            return false;
+        });
     }
 
     drawWave() {
