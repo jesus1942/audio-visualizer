@@ -84,12 +84,12 @@ class Guardian {
 
         const glitch = this.bassPulse || 0;
         const aspect = this.logo.naturalHeight / this.logo.naturalWidth;
-        const w = baseRadius * 1.9;
+        const w = baseRadius * 3.0; // tamaño generoso
         const h = w * aspect;
         const cx = centerX;
-        const cy = baseRadius * 0.85; // dentro del nucleo, visible
         const dx = w / 2;
         const dy = h / 2;
+        const cy = dy * 1.08; // cuelga desde el borde superior, completo y centrado
 
         // Desplazamiento del RGB-split segun el golpe
         const shift = glitch * 16 + Math.random() * glitch * 6;
@@ -526,6 +526,21 @@ class Guardian {
 
         drawSide(1, 1);    // derecha
         drawSide(-1, 1);   // izquierda (espejo)
+
+        // Nucleo esferico: fade desde el centro (0) hacia afuera.
+        // Difumina la base de las barras para que parezcan nacer del centro.
+        const sphereR = coreRadius * 1.3;
+        const sphere = this.ctx.createRadialGradient(
+            centerX, centerY, 0,
+            centerX, centerY, sphereR
+        );
+        sphere.addColorStop(0, `rgba(255, 255, 255, ${0.85 + this.bassPulse * 0.15})`);
+        sphere.addColorStop(0.45, `rgba(230, 230, 230, ${0.28 + this.bassPulse * 0.2})`);
+        sphere.addColorStop(1, 'rgba(0, 0, 0, 0)');
+        this.ctx.fillStyle = sphere;
+        this.ctx.beginPath();
+        this.ctx.arc(centerX, centerY, sphereR, 0, Math.PI * 2);
+        this.ctx.fill();
 
         // Logo central con glitch al son del bass
         this.drawLogo(centerX, radius);
