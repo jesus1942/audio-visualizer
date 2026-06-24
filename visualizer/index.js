@@ -376,17 +376,32 @@ class Guardian {
 
         const half = Math.floor(this.bufferLength / 2);
 
-        const getDeform = (idx) =>
-            Math.sin(this.cloudTime + idx * 0.1) * 10 +
-            Math.cos(this.cloudTime * 1.3 + idx * 0.15) * 7;
+        // Nivel de graves (primeros bins) para que la estrella lata estilo TrapNation
+        let bassSum = 0;
+        const bassBins = 8;
+        for (let b = 0; b < bassBins; b++) bassSum += this.dataArray[b];
+        const bass = (bassSum / bassBins) / 255; // 0..1
+        // Suavizado para que el latido sea organico y no tiemble
+        if (this.bassPulse === undefined) this.bassPulse = 0;
+        this.bassPulse += (bass - this.bassPulse) * 0.25;
 
-        // Resplandor del nucleo (horizonte de sucesos)
+        // El nucleo/estrella crece y encoge con el bass
+        const coreRadius = radius * (1 + this.bassPulse * 0.8);
+
+        // La deformacion respira sola y se amplifica con la musica
+        const getDeform = (idx) =>
+            (Math.sin(this.cloudTime + idx * 0.1) * 10 +
+             Math.cos(this.cloudTime * 1.3 + idx * 0.15) * 7) *
+            (1 + this.bassPulse * 1.5);
+
+        // Corona del nucleo: mas grande y pulsa con el bass
+        const coronaR = coreRadius * (3.4 + this.bassPulse * 1.2);
         const coreGlow = this.ctx.createRadialGradient(
             centerX, centerY, 0,
-            centerX, centerY, radius * 2.2
+            centerX, centerY, coronaR
         );
-        coreGlow.addColorStop(0, 'rgba(255, 255, 255, 0.45)');
-        coreGlow.addColorStop(0.4, 'rgba(200, 200, 200, 0.15)');
+        coreGlow.addColorStop(0, `rgba(255, 255, 255, ${0.4 + this.bassPulse * 0.4})`);
+        coreGlow.addColorStop(0.35, `rgba(215, 215, 215, ${0.12 + this.bassPulse * 0.18})`);
         coreGlow.addColorStop(1, 'rgba(0, 0, 0, 0)');
         this.ctx.fillStyle = coreGlow;
         this.ctx.fillRect(0, 0, width, height);
@@ -400,21 +415,21 @@ class Guardian {
 
                 const av1 = this.dataArray[i] / 255;
                 const av2 = this.dataArray[i + 1] / 255;
-                const bh1 = av1 * radius * 3.2;
-                const bh2 = av2 * radius * 3.2;
+                const bh1 = av1 * coreRadius * 3.2;
+                const bh2 = av2 * coreRadius * 3.2;
                 const d1 = getDeform(i);
                 const d2 = getDeform(i + 1);
 
-                // Punto interno (radio base) y externo (radio + barra)
-                const ix1 = centerX + dir * Math.cos(a1) * (radius + d1);
-                const iy1 = centerY + Math.sin(a1) * (radius + d1);
-                const ox1 = centerX + dir * Math.cos(a1) * (radius + bh1 + d1);
-                const oy1 = centerY + Math.sin(a1) * (radius + bh1 + d1);
+                // Punto interno (radio base que late) y externo (radio + barra)
+                const ix1 = centerX + dir * Math.cos(a1) * (coreRadius + d1);
+                const iy1 = centerY + Math.sin(a1) * (coreRadius + d1);
+                const ox1 = centerX + dir * Math.cos(a1) * (coreRadius + bh1 + d1);
+                const oy1 = centerY + Math.sin(a1) * (coreRadius + bh1 + d1);
 
-                const ix2 = centerX + dir * Math.cos(a2) * (radius + d2);
-                const iy2 = centerY + Math.sin(a2) * (radius + d2);
-                const ox2 = centerX + dir * Math.cos(a2) * (radius + bh2 + d2);
-                const oy2 = centerY + Math.sin(a2) * (radius + bh2 + d2);
+                const ix2 = centerX + dir * Math.cos(a2) * (coreRadius + d2);
+                const iy2 = centerY + Math.sin(a2) * (coreRadius + d2);
+                const ox2 = centerX + dir * Math.cos(a2) * (coreRadius + bh2 + d2);
+                const oy2 = centerY + Math.sin(a2) * (coreRadius + bh2 + d2);
 
                 this.ctx.beginPath();
                 this.ctx.moveTo(ix1, iy1);
